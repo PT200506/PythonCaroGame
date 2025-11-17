@@ -1,28 +1,24 @@
-import asyncio
-import websockets
-import json
+import websocket
+import threading
 
-SERVER_URL = "wss://caro-ws.onrender.com"   # Nếu chạy LAN thì đổi thành IP máy chủ
+SERVER_URL = "wss://caro-ws.onrender.com"  # dùng wss nếu deploy trên Render
 
-async def connect_to_server(on_message):
-    try:
-        async with websockets.connect(SERVER_URL) as websocket:
-            print("Đã kết nối tới server WebSocket!")
+def on_message(ws, message):
+    print("Nhận dữ liệu:", message)
+    # Xử lý đi nước đi đối phương, update board...
 
-            # Lắng nghe tin nhắn từ server
-            async for message in websocket:
-                data = json.loads(message)
-                on_message(data)
+def on_open(ws):
+    print("Đã kết nối server WebSocket!")
 
-    except Exception as e:
-        print("Lỗi kết nối:", e)
+def on_close(ws):
+    print("Ngắt kết nối server")
 
+ws = websocket.WebSocketApp(
+    SERVER_URL,
+    on_message=on_message,
+    on_open=on_open,
+    on_close=on_close
+)
 
-async def send_move(x, y):
-    """Gửi nước đi lên server"""
-    try:
-        async with websockets.connect(SERVER_URL) as websocket:
-            msg = json.dumps({"type": "move", "x": x, "y": y})
-            await websocket.send(msg)
-    except Exception as e:
-        print("Lỗi gửi nước:", e)
+threading.Thread(target=ws.run_forever, daemon=True).start()
+
