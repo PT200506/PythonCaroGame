@@ -1,33 +1,38 @@
+# server_wan.py
 import asyncio
 import websockets
+import json
 
-# Danh sách client đang kết nối
-connected_clients = set()
+# Lưu trữ 2 kết nối client
+clients = []
 
-async def handler(websocket, path):
-    # thêm client mới
-    connected_clients.add(websocket)
-    print("🔵 Client connected")
+async def handler(websocket):
+    global clients
+
+    # Thêm client mới
+    clients.append(websocket)
+    print(f"Client connected. Tổng client: {len(clients)}")
 
     try:
         async for message in websocket:
-            # broadcast cho tất cả client khác
-            for client in connected_clients:
+            data = json.loads(message)
+            print(f"Received: {data}")
+
+            # Gửi dữ liệu cho client còn lại
+            for client in clients:
                 if client != websocket:
-                    await client.send(message)
+                    await client.send(json.dumps(data))
 
-    except websockets.exceptions.ConnectionClosed:
-        print("🔴 Client disconnected")
-
+    except websockets.ConnectionClosed:
+        print("Client disconnected.")
     finally:
-        connected_clients.remove(websocket)
-
+        clients.remove(websocket)
+        print(f"Client removed. Tổng client: {len(clients)}")
 
 async def main():
-    print("🚀 WebSocket server running on ws://localhost:8765")
+    print("Server WebSocket đang chạy trên ws://localhost:8765")
     async with websockets.serve(handler, "0.0.0.0", 8765):
-        await asyncio.Future()  # chạy mãi mãi
-
+        await asyncio.Future()  # chạy vĩnh viễn
 
 if __name__ == "__main__":
     asyncio.run(main())
